@@ -3,6 +3,8 @@ from .operators import prod
 from numpy import array, float64, ndarray
 import numba
 
+from itertools import product
+
 MAX_DIMS = 32
 
 
@@ -25,7 +27,7 @@ def index_to_position(index, strides):
     """
 
     # TODO: Implement for Task 2.1.
-    raise NotImplementedError('Need to implement for Task 2.1')
+    return sum([ i * s for i,s in zip(index, strides) ])
 
 
 def to_index(ordinal, shape, out_index):
@@ -45,7 +47,14 @@ def to_index(ordinal, shape, out_index):
 
     """
     # TODO: Implement for Task 2.1.
-    raise NotImplementedError('Need to implement for Task 2.1')
+    out_index_vals = list(
+        product( 
+         *[ (range(dim)) for dim in shape ]
+        )
+    )[ ordinal ]
+
+    for ind, val in enumerate(out_index_vals):
+        out_index[ind] = val
 
 
 def broadcast_index(big_index, big_shape, shape, out_index):
@@ -97,6 +106,18 @@ def strides_from_shape(shape):
 
 
 class TensorData:
+    """
+    Internally Represents Properties of Tensor necessary for capabilities like :
+    - Storage ( Each tensor is internally represented as a continuous array-like abstraction )
+    - Strides & Indexing  (Retrieving a snippet of input Tensor)
+    - transposition (Reshaping the Tensor)
+
+    Attributes:
+
+        storage (:class:`List`) : Actual Data of Tensors stored as an contiguous array
+        shape (:class:`Tuple`) : Shape of the input tensor
+        stride (:class:`Tuple`): Strides essential make the continuous array behave like a Tensor 
+    """
     def __init__(self, storage, shape, strides=None):
         if isinstance(storage, ndarray):
             self._storage = storage
@@ -192,7 +213,14 @@ class TensorData:
         ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
 
         # TODO: Implement for Task 2.1.
-        raise NotImplementedError('Need to implement for Task 2.1')
+        new_shape = tuple( self._shape[ array(order)  ] )
+        new_stride = tuple( self._strides[ array(order)  ] )
+        return TensorData(
+                storage = self._storage,
+                shape = new_shape,
+                strides=new_stride,
+            )
+
 
     def to_string(self):
         s = ""
