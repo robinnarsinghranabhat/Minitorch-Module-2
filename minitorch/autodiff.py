@@ -190,7 +190,8 @@ class History:
         Returns:
             list of numbers : a derivative with respect to `inputs`
         """
-        raise NotImplementedError('Need to include this file from past assignment.')
+        # TODO: Implement for Task 1.4.
+        return self.last_fn.chain_rule( self.ctx, self.inputs, d_output  )
 
 
 class FunctionBase:
@@ -272,8 +273,9 @@ class FunctionBase:
         """
         # Tip: Note when implementing this function that
         # cls.backward may return either a value or a tuple.
-        raise NotImplementedError('Need to include this file from past assignment.')
-
+        # TODO: Implement for Task 1.3.
+        derivatives = wrap_tuple( cls.backward( ctx, d_output ) )
+        return [ (inp, deriv) for inp,deriv in zip(inputs, derivatives) if not is_constant(inp) ]
 
 # Algorithms for backpropagation
 
@@ -282,7 +284,7 @@ def is_constant(val):
     return not isinstance(val, Variable) or val.history is None
 
 
-def topological_sort(variable):
+def topological_sort(node):
     """
     Computes the topological order of the computation graph.
 
@@ -293,9 +295,45 @@ def topological_sort(variable):
         list of Variables : Non-constant Variables in topological order
                             starting from the right.
     """
-    raise NotImplementedError('Need to include this file from past assignment.')
+    # TODO: Implement for Task 1.4.
+    sorted_nodes = []
+    perm_visited = {}
+    temp_visited = {}
+
+    # Recursively Visit child node and add them
+    def visit(node):
+        
+        # For Generic Number-objects (0.0, 1.2, 4 e.t.c) used as node, ignore them
+        if not isinstance(node, Variable):
+            return
+
+        if node.name in perm_visited:
+            return
+        
+        if node.name in temp_visited:
+            raise Exception(f'{node} is not a Dag')
+        
+        temp_visited[ node.name ] = node
+
+        try:
+            for child_node in node.history.inputs:
+                visit(child_node)
+        except (TypeError, AttributeError):
+            # Leaf Node reached. Skipping Now
+            # TypeError : occurs if node.name doesn't exist. i.e node is just a numebr
+            # AttributeError : occurs if node.history is None, i.e a left node
+            pass
+        
+        del temp_visited[ node.name ]
+        perm_visited[ node.name ] = node
+        sorted_nodes.append(node)
+
+    visit(node)
+
+    return sorted_nodes[::-1]
 
 
+from collections import defaultdict
 def backpropagate(variable, deriv):
     """
     Runs backpropagation on the computation graph in order to
@@ -309,4 +347,27 @@ def backpropagate(variable, deriv):
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    raise NotImplementedError('Need to include this file from past assignment.')
+    # TODO: Implement for Task 1.4.
+    sorted_nodes = topological_sort(variable)
+    accumulated_derivatives = defaultdict(lambda : 0)
+    # Set Derivative for starting Node/Varible/Arrow 
+    accumulated_derivatives[ sorted_nodes[0].name ] += deriv      
+
+    for node in sorted_nodes:
+        try:
+            if node.is_leaf(): 
+                node.accumulate_derivative( accumulated_derivatives[node.name] )
+            else:
+                local_derivatives_wrt_inputs = node.history.backprop_step( accumulated_derivatives[node.name] )
+                for sub_node, local_deriv in local_derivatives_wrt_inputs:
+                    accumulated_derivatives[ sub_node.name ] += local_deriv
+
+        # Hacky way to update derivate. 
+        # During test, some Variable objects created had history with empty last_fn, which doesn't make sense. 
+        # the fact that history exists, should enforce that, some operations created it.
+        # This implied, even if a Node is not a leaf-Node, calling : node.history.last_fn() would cause error. 
+        # due to that attribute being None
+        except AttributeError:
+            if node._derivative is None:
+               node._derivative = 0.0
+            node._derivative += accumulated_derivatives[node.name]

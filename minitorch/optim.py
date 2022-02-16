@@ -9,11 +9,11 @@ class SGD(Optimizer):
         self.lr = lr
 
     def zero_grad(self):
-        for p in self.parameters:
+        for _,p in self.parameters.items():
             if p.value.derivative is not None:
                 p.value._derivative = None
 
     def step(self):
-        for p in self.parameters:
+        for _, p in self.parameters.items():
             if p.value.derivative is not None:
                 p.update(p.value - self.lr * p.value.derivative)

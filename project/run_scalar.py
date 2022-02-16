@@ -9,7 +9,10 @@ import random
 class Network(minitorch.Module):
     def __init__(self, hidden_layers):
         super().__init__()
-        raise NotImplementedError('Need to include this file from past assignment.')
+        # TODO: Implement for Task 1.5.
+        self.layer1 = Linear(2, hidden_layers)
+        self.layer2 = Linear(hidden_layers, hidden_layers)
+        self.layer3 = Linear(hidden_layers, 1)
 
     def forward(self, x):
         middle = [h.relu() for h in self.layer1.forward(x)]
@@ -21,24 +24,32 @@ class Linear(minitorch.Module):
     def __init__(self, in_size, out_size):
         super().__init__()
         self.weights = []
-        self.bias = []
-        for i in range(in_size):
+
+        for j in range(out_size):
             self.weights.append([])
-            for j in range(out_size):
-                self.weights[i].append(
+
+            # the plus_1 is for the bias term : 
+            # assume : out_1 = inp_1 * w_11 + inp_2 * w_21 + 1 * w_31
+            # where, w_31 is the BIAS
+            for i in range(in_size+1):
+                self.weights[j].append(
                     self.add_parameter(
-                        f"weight_{i}_{j}", minitorch.Scalar(2 * (random.random() - 0.5))
+                        # f"weight_{i}_{j}", minitorch.Scalar(2 * (random.random() - 0.5))
+                        f"weight_{i}_{j}", minitorch.Scalar(0.5)
                     )
                 )
-        for j in range(out_size):
-            self.bias.append(
-                self.add_parameter(
-                    f"bias_{j}", minitorch.Scalar(2 * (random.random() - 0.5))
-                )
-            )
 
     def forward(self, inputs):
-        raise NotImplementedError('Need to include this file from past assignment.')
+        # TODO: Implement for Task 1.5.
+        outputs = []
+        # include the bias term
+        inputs = list(inputs) + [ minitorch.Scalar(1) ] 
+
+        for weights_per_output in self.weights:
+            out = [  inp * w.value  for inp , w in zip( inputs, weights_per_output ) ]
+            outputs.append( sum(out) )
+        
+        return outputs
 
 
 def default_log_fn(epoch, total_loss, correct, losses):
@@ -97,8 +108,11 @@ class ScalarTrain:
 
 
 if __name__ == "__main__":
-    PTS = 50
-    HIDDEN = 2
-    RATE = 0.5
+    ## Experiment with Different Dataset with streamlit application
+    ## These are the default settings 
+    PTS = 200
+    HIDDEN = 3
+    RATE = 0.1
     data = minitorch.datasets["Simple"](PTS)
-    ScalarTrain(HIDDEN).train(data, RATE)
+    ScalarTrain(HIDDEN).train(data, RATE, max_epochs=1000)
+
